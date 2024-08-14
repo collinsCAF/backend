@@ -1,24 +1,34 @@
 require("dotenv").config();
 const express = require('express');
-const http = require('http');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const SendMoneyRouter = require("./Router/SendMessage");
-
+const  {sendMessages} = require("./util/otp")
 const app = express();
-const server = http.createServer(app);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 app.use(bodyParser.json());
-app.use('/api', SendMoneyRouter);
 
 app.get("/", (req, res) => {
   res.send("This API is running live🥳");
 });
 
+app.post("/donation", async (req, res) => {
+    const { name, email, message } = req.body;
+  
+  await  sendMessages(name, email, message)
+    res.send("This API is running live🥳");
+    //   .then(() => {
+    //     res.send("successful");
+    //   })
+    //   .catch((error) => {
+    //     console.error(error);
+    //     res.status(500).send("Failed to send message");
+    //   });
+  });
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
