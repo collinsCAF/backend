@@ -18,7 +18,7 @@ const sendMessages = (name, email, message) => {
 
     const mailOptions = {
         from: process.env.EMAIL_SERVICE_USER,
-        to: "Vitetemile@gmail.com",
+        to: "Collinsaralufoundation@gmail.com",
         subject: 'Dontation Info',
         html: `
 <!DOCTYPE html>
