@@ -8,13 +8,14 @@ const logger = require('./utils/logger')
 const mongoose = require('mongoose')
 const authRouter = require('./Routes/Auth')
 const userRouter = require('./Routes/User')
+const QuestionRouter = require('./Routes/Question')
 const middleware = require('./utils/middleware')
 const session = require('express-session');
 logger.info('connecting to', config.MONGODB_URI)
 mongoose.connect(config.MONGODB_URI)
   .then(() => {
     logger.info('connected to MongoDB')
-    
+
   })
   .catch((error) => {
     logger.error('error connection to MongoDB:', error.message)
@@ -32,7 +33,8 @@ app.use(middleware.userExtractor)
 
 
 app.use('/api/auth', authRouter)
-app.use('/api/profile', userRouter)
+app.use('/api/auth', userRouter)
+app.use('/api', QuestionRouter)
 
 
 app.use(middleware.unknownEndpoint)

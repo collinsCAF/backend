@@ -1,0 +1,24 @@
+{
+  "questionText": "What is the capital of France?",
+  "options": [
+    {
+      "option": "Paris",
+      "optionLabel": "Option A"
+    },
+    {
+      "option": "London",
+      "optionLabel": "Option B"
+    },
+    {
+      "option": "Berlin",
+      "optionLabel": "Option C"
+    },
+    {
+      "option": "Madrid",
+      "optionLabel": "Option D"
+    }
+  ],
+  "correctAnswer": "Option A",
+  "answerDescription": "Paris is the capital of France.",
+  "category": "Geography"
+}

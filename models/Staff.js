@@ -5,8 +5,7 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, 
-    confirmpassword: { type: String, required: true },
+    password: { type: String, required: true },
     role: { type: String, required: true },
     OTP: { type: String },
     OTPCreatedTime: { type: Date },
@@ -22,16 +21,12 @@ userSchema.pre('save', async function (next) {
     try {
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt);
-        user.confirmpassword = await bcrypt.hash(user.confirmpassword, salt);
         next();
     } catch (error) {
         next(error);
     }
 });
 
-userSchema.methods.comparePassword = function (candidatePassword) {
-    return bcrypt.compare(candidatePassword, this.password);
-};
 
 const AddStaff = mongoose.model('addStaff', userSchema);
 
