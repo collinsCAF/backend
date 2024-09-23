@@ -21,7 +21,7 @@ const questionSchema = new mongoose.Schema({
     },
     answerDescription: {
         type: String,
-        required: true,
+        // required: true,
     },
     category: {
         type: String,
