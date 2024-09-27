@@ -13,6 +13,8 @@ const userSchema = new mongoose.Schema({
     OTPAttempts: { type: Number, default: 0 },
     isBlocked: { type: Boolean, default: false },
     blockUntil: { type: Date },
+    refreshToken: { type: String },
+    requireOTP: { type: Boolean, default: false }
 });
 
 userSchema.pre('save', async function (next) {
@@ -29,9 +31,9 @@ userSchema.pre('save', async function (next) {
     }
 });
 
-// userSchema.methods.comparePassword = function (candidatePassword) {
-//     return bcrypt.compare(candidatePassword, this.password);
-// };
+userSchema.methods.comparePassword = function(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+};
 
 const User = mongoose.model('eduUsers', userSchema);
 

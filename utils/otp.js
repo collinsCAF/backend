@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const config = require('../utils/config')
-
+const generateEmailTemplate = require('./emailTemplate');
 
 const generateOTP = () => {
     const otpLength = 4;
@@ -12,62 +11,61 @@ const generateOTP = () => {
     return otp;
 };
 
-const sendOTP = (email, OTP) => {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        secure: false,
-        auth: {
-            user: config.EMAIL_SERVICE_USER,
-            pass: config.EMAIL_SERVICE_PASS,
-        },
-        tls: {
-            rejectUnauthorized: false,
-        },
-    });
+const sendOTP = async (email, otp) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
 
-    const mailOptions = {
-        from: config.EMAIL_SERVICE_USER,
-        to: email,
-        subject: 'Your OTP',
-        text: `Your OTP is: ${OTP}`,
-    };
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'OTP Verification',
+            html: generateEmailTemplate(otp)
+        };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.log('error', error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
-};
-const sendStaffMessage = (email, ) => {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        secure: false,
-        auth: {
-            user: config.EMAIL_SERVICE_USER,
-            pass: config.EMAIL_SERVICE_PASS,
-        },
-        tls: {
-            rejectUnauthorized: false,
-        },
-    });
-
-    const mailOptions = {
-        from: config.EMAIL_SERVICE_USER,
-        to: email,
-        subject: 'Your OTP',
-        text: `Your OTP is: `,
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.log('error', error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
+        await transporter.sendMail(mailOptions);
+        console.log('OTP sent successfully');
+    } catch (error) {
+        console.error('Error sending OTP:', error);
+        throw error; // Rethrow the error so it can be handled in the controller
+    }
 };
 
+const sendStaffMessage = async (email, password, otp) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Staff Account Created',
+            html: `
+                <h1>Welcome to Our Team!</h1>
+                <p>Your account has been created with the following credentials:</p>
+                <p>Email: ${email}</p>
+                <p>Temporary Password: ${password}</p>
+                <p>Your OTP for first-time login: ${otp}</p>
+                <p>Please change your password after your first login.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log('Staff message sent successfully');
+    } catch (error) {
+        console.error('Error sending staff message:', error);
+        throw error; // Rethrow the error so it can be handled in the controller
+    }
+};
 
 module.exports = { generateOTP, sendOTP, sendStaffMessage };
