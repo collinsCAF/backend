@@ -30,3 +30,11 @@ exports.isStaffOrAdmin = (req, res, next) => {
         res.status(403).json({ message: 'Access denied. Staff or Admin only.' });
     }
 };
+
+exports.isSuperAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'superadmin') {
+        next();
+    } else {
+        res.status(403).json({ message: 'Access denied. Super Admin only.' });
+    }
+};

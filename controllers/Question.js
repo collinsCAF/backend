@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose'); // Add this line
 const Question = require('../models/Questions');
 const StaffQuestionTracker = require('../models/StaffQuestionTracker');
 const router = express.Router();
@@ -128,7 +129,7 @@ exports.getStaffQuestionStats = async (req, res) => {
         const staffId = req.user.id; // Assuming the user ID is stored in the token
 
         const stats = await Question.aggregate([
-            { $match: { uploadedBy: mongoose.Types.ObjectId(staffId) } },
+            { $match: { uploadedBy: new mongoose.Types.ObjectId(staffId) } },
             { $group: { 
                 _id: "$category", 
                 count: { $sum: 1 } 
@@ -146,6 +147,51 @@ exports.getStaffQuestionStats = async (req, res) => {
     } catch (error) {
         console.error('Error in getStaffQuestionStats:', error);
         res.status(500).json({ message: 'Failed to retrieve question statistics', error: error.message });
+    }
+};
+
+// Add this function to the existing file
+exports.getStaffQuestionsList = async (req, res) => {
+    try {
+        // Ensure the user is a super admin
+        if (req.user.role !== 'superadmin') {
+            return res.status(403).json({ message: 'Access denied. Super Admin only.' });
+        }
+
+        const staffQuestions = await Question.aggregate([
+            { $group: { 
+                _id: "$uploadedBy", 
+                questionCount: { $sum: 1 },
+                questions: { $push: { 
+                    _id: "$_id", 
+                    questionText: "$questionText", 
+                    category: "$category",
+                    uploadedAt: "$uploadedAt"
+                }}
+            }},
+            { $lookup: {
+                from: "addstaffs",
+                localField: "_id",
+                foreignField: "_id",
+                as: "staffInfo"
+            }},
+            { $unwind: "$staffInfo" },
+            { $project: {
+                staffName: "$staffInfo.name",
+                staffEmail: "$staffInfo.email",
+                questionCount: 1,
+                questions: 1
+            }},
+            { $sort: { questionCount: -1 } }
+        ]);
+
+        res.status(200).json({
+            message: 'Staff questions list retrieved successfully',
+            staffQuestions
+        });
+    } catch (error) {
+        console.error('Error in getStaffQuestionsList:', error);
+        res.status(500).json({ message: 'Failed to retrieve staff questions list', error: error.message });
     }
 };
 

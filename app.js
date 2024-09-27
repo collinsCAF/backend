@@ -20,7 +20,16 @@ mongoose.connect(config.MONGODB_URI)
     logger.error('error connection to MongoDB:', error.message)
   })
 
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf, encoding) => {
+    try {
+      JSON.parse(buf);
+    } catch(e) {
+      res.status(400).json({ message: 'Invalid JSON' });
+      throw new Error('Invalid JSON');
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 app.use(bodyParser.json());
@@ -31,4 +40,5 @@ app.use('/api', QuestionRouter)
 
 app.use(middleware.unknownEndpoint)
 app.use(middleware.errorHandler)
+
 module.exports = app
