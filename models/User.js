@@ -14,7 +14,8 @@ const userSchema = new mongoose.Schema({
     isBlocked: { type: Boolean, default: false },
     blockUntil: { type: Date },
     refreshToken: { type: String },
-    requireOTP: { type: Boolean, default: false }
+    requireOTP: { type: Boolean, default: false },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
 userSchema.pre('save', async function (next) {
@@ -31,10 +32,10 @@ userSchema.pre('save', async function (next) {
     }
 });
 
-userSchema.methods.comparePassword = function(candidatePassword) {
+userSchema.methods.comparePassword = async function(candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-const User = mongoose.model('eduUsers', userSchema);
+const User = mongoose.model('User', userSchema);
 
 module.exports = User;

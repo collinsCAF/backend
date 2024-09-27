@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
+const staffSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
     requireOTP: { type: Boolean, default: false }
 });
 
-userSchema.pre('save', async function (next) {
+staffSchema.pre('save', async function (next) {
     const user = this;
     if (!user.isModified('password')) return next();
 
@@ -28,10 +28,10 @@ userSchema.pre('save', async function (next) {
     }
 });
 
-userSchema.methods.comparePassword = function(candidatePassword) {
+staffSchema.methods.comparePassword = async function(candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-const AddStaff = mongoose.model('addStaff', userSchema);
+const AddStaff = mongoose.model('AddStaff', staffSchema);
 
 module.exports = AddStaff;

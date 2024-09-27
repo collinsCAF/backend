@@ -31,6 +31,8 @@ const questionSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'AddStaff', required: true },
+    uploadedAt: { type: Date, default: Date.now }
 });
 
 // Custom validator to limit the number of options to 4

@@ -1,229 +1,130 @@
-const { generateOTP, sendOTP, sendStaffMessage } = require('../utils/otp')
-const User = require("../models/User")
-const AddStaff = require("../models/Staff")
+const jwt = require('jsonwebtoken');
+const { generateOTP, sendOTP } = require('../utils/otp');
+const User = require("../models/User");
+const AddStaff = require("../models/Staff");
 const Question = require('../models/Questions');
-const crypto = require('crypto');
 
-// Modify the genericLogin function
-const genericLogin = async (Model, role, req, res) => {
+const generateToken = (user) => {
+  return jwt.sign({ id: user._id, role: user.role }, process.env.SECRET_KEY, { expiresIn: '1d' });
+};
+
+exports.signup = async (req, res) => {
+  const { name, email, password, phoneNumber, school, referralCode } = req.body;
+  try {
+    let user = await User.findOne({ email });
+    if (user) return res.status(400).json({ message: 'User Details have already been used' });
+
+    let referrer = null;
+    if (referralCode) {
+      referrer = await User.findOne({ email: referralCode });
+      if (!referrer) {
+        return res.status(400).json({ message: 'Invalid referral code' });
+      }
+    }
+
+    const OTP = generateOTP();
+    // sendOTP(email, OTP);
+    const OTPCreatedTime = new Date();
+
+    user = new User({ 
+      name, 
+      email, 
+      password, 
+      phoneNumber, 
+      school, 
+      OTP, 
+      OTPCreatedTime,
+      referredBy: referrer ? referrer._id : null
+    });
+    await user.save();
+
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await Model.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid password' });
-
-    // Check if OTP verification is required
-    if (user.requireOTP && user.OTP) {
-      return res.status(200).json({ 
-        message: 'OTP verification required',
-        requireOTP: true,
-        email: user.email
-      });
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Set session data
-    req.session.userId = user._id;
-    req.session.role = user.role || role;
-
-    res.status(200).json({ message: 'Login successful', role: user.role || role });
+    const token = generateToken(user);
+    res.status(200).json({ message: 'Login successful', token });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Modify the genericSignup function
-const genericSignup = async (Model, role, req, res) => {
-  const { name, email, password, confirmPassword, phoneNumber, school, requireOTP } = req.body;
+exports.staffLogin = async (req, res) => {
+  const { email, password } = req.body;
   try {
-    let user = await Model.findOne({ email });
-    if (user) return res.status(400).json({ message: `${role} already exists` });
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: 'Passwords do not match' });
+    const staff = await AddStaff.findOne({ email });
+    if (!staff) {
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const OTP = requireOTP ? generateOTP() : null;
-    if (requireOTP) {
-      role === 'Staff' ? sendStaffMessage(email, password, OTP) : sendOTP(email, OTP);
+    const isMatch = await staff.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
-    const OTPCreatedTime = requireOTP ? new Date() : null;
 
-    user = new Model({ name, email, password, phoneNumber, school, OTP, OTPCreatedTime, role, requireOTP });
-    await user.save();
-
-    res.status(201).json({ 
-      message: `${role} created successfully. ${requireOTP ? 'Please verify your email.' : ''}`,
-      requireOTP
-    });
+    const token = generateToken(staff);
+    res.status(200).json({ message: 'Staff login successful', token });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// Generic resend OTP function
-const genericResendOTP = async (Model, role, req, res) => {
-  const { email } = req.body;
+exports.superAdminLogin = async (req, res) => {
+  const { email, password } = req.body;
   try {
-    const user = await Model.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'User not found' });
+    const superAdmin = await AddStaff.findOne({ email, role: 'superadmin' });
+    if (!superAdmin) {
+      console.log(`No super admin found with email: ${email}`);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
-    const OTP = generateOTP();
-    await sendOTP(email, OTP); // Add await here
-    const OTPCreatedTime = new Date();
+    const isMatch = await superAdmin.comparePassword(password);
+    if (!isMatch) {
+      console.log(`Password mismatch for super admin: ${email}`);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
-    user.OTP = OTP;
-    user.OTPCreatedTime = OTPCreatedTime;
-    await user.save();
-
-    res.status(200).json({ message: `New OTP sent to ${role} email` });
+    const token = generateToken(superAdmin);
+    res.status(200).json({ message: 'Super admin login successful', token });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Error sending OTP. Please try again later.' });
+    console.error('Error in superAdminLogin:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-// Generic OTP verification function
-const genericVerifyOtp = async (Model, role, req, res) => {
-  const { email, otp } = req.body;
-
-  try {
-    const user = await Model.findOne({ email });
-
-    if (!user) return res.status(400).json({ message: 'Invalid email' });
-    if (user.OTP !== otp) return res.status(400).json({ message: 'Invalid OTP' });
-
-    const currentTime = new Date();
-    const otpAge = (currentTime - user.OTPCreatedTime) / 1000; // age in seconds
-    if (otpAge > 300) return res.status(400).json({ message: 'OTP expired' }); // OTP expires in 5 minutes (300 seconds)
-
-    user.OTP = null;
-    user.OTPCreatedTime = null;
-    await user.save();
-
-    res.status(200).json({ message: `${role} OTP verified successfully` });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+exports.logout = (req, res) => {
+  // With JWT, logout is typically handled on the client-side
+  res.status(200).json({ message: 'Logout successful' });
 };
 
-// Update the existing verifyOtp function
-exports.verifyOtp = (req, res) => genericVerifyOtp(User, 'User', req, res);
-
-// Add new OTP verification functions for staff and super-admin
-exports.verifyStaffOtp = (req, res) => genericVerifyOtp(AddStaff, 'Staff', req, res);
-exports.verifySuperAdminOtp = (req, res) => genericVerifyOtp(AddStaff, 'SuperAdmin', req, res);
-
-// Generic OTP verification
 exports.verifyOtp = async (req, res) => {
-  const { email, otp } = req.body;
-  const Model = email.includes('staff') ? AddStaff : User;
-
-  try {
-    const user = await Model.findOne({ email });
-
-    if (!user) return res.status(400).json({ message: 'Invalid email' });
-    if (user.OTP !== otp) return res.status(400).json({ message: 'Invalid OTP' });
-
-    const currentTime = new Date();
-    const otpAge = (currentTime - user.OTPCreatedTime) / 1000; // age in seconds
-    if (otpAge > 300) return res.status(400).json({ message: 'OTP expired' }); // OTP expires in 5 minutes (300 seconds)
-
-    user.OTP = null;
-    user.OTPCreatedTime = null;
-    await user.save();
-
-    res.status(200).json({ message: 'OTP verified' });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+  // Implement OTP verification logic here
 };
-
-// Remove the refreshToken function as it's no longer needed
-
-exports.signup = (req, res) => genericSignup(User, 'User', req, res);
-exports.studentSignup = (req, res) => genericSignup(User, 'Student', req, res);
-exports.superAdminSignup = async (req, res) => {
-  try {
-    // Check if a super admin already exists
-    const existingSuperAdmin = await AddStaff.findOne({ role: 'SuperAdmin' });
-    if (existingSuperAdmin) {
-      return res.status(403).json({ message: 'Super Admin already exists' });
-    }
-
-    // Proceed with super admin creation
-    await genericSignup(AddStaff, 'SuperAdmin', req, res);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-exports.adminAddStaff = (req, res) => genericSignup(AddStaff, 'Staff', req, res);
-
-exports.login = (req, res) => genericLogin(User, 'User', req, res);
-exports.studentLogin = (req, res) => genericLogin(User, 'Student', req, res);
-exports.superAdminLogin = (req, res) => genericLogin(AddStaff, 'SuperAdmin', req, res);
-exports.staffLogin = (req, res) => genericLogin(AddStaff, 'Staff', req, res);
-
-exports.resendUserOtp = (req, res) => genericResendOTP(User, 'User', req, res);
-exports.resendStaffOtp = (req, res) => genericResendOTP(AddStaff, 'Staff', req, res);
-exports.resendSuperAdminOtp = (req, res) => genericResendOTP(AddStaff, 'SuperAdmin', req, res);
 
 exports.forgetPassword = async (req, res) => {
-  const { email } = req.body;
-  const Model = email.includes('staff') ? AddStaff : User;
-
-  try {
-    const user = await Model.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid email' });
-
-    const OTP = generateOTP();
-    sendOTP(email, OTP);
-    const OTPCreatedTime = new Date();
-
-    user.OTP = OTP;
-    user.OTPCreatedTime = OTPCreatedTime;
-    await user.save();
-
-    res.status(200).json({ message: 'OTP sent to email' });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+  // Implement forget password logic here
 };
 
 exports.changePassword = async (req, res) => {
-  const { email, otp, newPassword, confirmPassword } = req.body;
-  const Model = email.includes('staff') ? AddStaff : User;
-
-  try {
-    const user = await Model.findOne({ email });
-
-    if (!user) return res.status(400).json({ message: 'Invalid email' });
-    if (user.OTP !== otp) return res.status(400).json({ message: 'Invalid OTP' });
-
-    const currentTime = new Date();
-    const otpAge = (currentTime - user.OTPCreatedTime) / 1000; // age in seconds
-    if (otpAge > 300) return res.status(400).json({ message: 'OTP expired' }); // OTP expires in 5 minutes (300 seconds)
-
-    if (newPassword !== confirmPassword) return res.status(400).json({ message: 'Passwords do not match' });
-
-    user.password = newPassword;
-    user.OTP = null;
-    user.OTPCreatedTime = null;
-    await user.save();
-
-    res.status(200).json({ message: 'Password changed successfully' });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+  // Implement change password logic here
 };
 
 exports.getDashboardStats = async (req, res) => {
@@ -243,7 +144,6 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-// Add a new function to toggle OTP requirement
 exports.toggleOTPRequirement = async (req, res) => {
   const { email, requireOTP } = req.body;
   try {
@@ -260,11 +160,81 @@ exports.toggleOTPRequirement = async (req, res) => {
   }
 };
 
-exports.logout = (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ message: 'Could not log out, please try again' });
+exports.superAdminSignup = async (req, res) => {
+  const { name, email, password, confirmPassword } = req.body;
+  try {
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
     }
-    res.status(200).json({ message: 'Logout successful' });
-  });
+    
+    let superAdmin = await AddStaff.findOne({ email });
+    if (superAdmin) {
+      return res.status(400).json({ message: 'Super Admin already exists' });
+    }
+
+    superAdmin = new AddStaff({ name, email, password, role: 'superadmin' });
+    await superAdmin.save();
+
+    // After successful signup, don't generate token
+    res.status(201).json({ message: 'Super Admin created successfully' });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.adminAddStaff = async (req, res) => {
+  const { name, email, password, confirmPassword, role } = req.body;
+  try {
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
+    }
+    
+    let staff = await AddStaff.findOne({ email });
+    if (staff) {
+      return res.status(400).json({ message: 'Staff member already exists' });
+    }
+
+    staff = new AddStaff({ name, email, password, role });
+    await staff.save();
+
+    res.status(201).json({ message: 'Staff member added successfully' });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.checkSuperAdmin = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const superAdmin = await AddStaff.findOne({ email });
+    if (!superAdmin) {
+      return res.status(404).json({ message: 'Super admin not found' });
+    }
+    res.status(200).json({
+      message: 'Super admin found',
+      role: superAdmin.role,
+      hasPassword: !!superAdmin.password
+    });
+  } catch (error) {
+    console.error('Error in checkSuperAdmin:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.generateReferralLink = async (req, res) => {
+  try {
+    const userId = req.user.id; // Assuming you have user info in req.user after authentication
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const referralLink = `${process.env.FRONTEND_URL}/signup?ref=${user.email}`;
+    res.status(200).json({ referralLink });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };

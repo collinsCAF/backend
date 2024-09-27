@@ -2,6 +2,8 @@ const { generateOTP, sendOTP } = require('../utils/otp')
 const express = require("express")
 const User = require("../models/User")
 const jwt = require('jsonwebtoken');
+const StaffQuestionTracker = require('../models/StaffQuestionTracker');
+const { getQuestionCountByStaff } = require('./Question');
 
 
 
@@ -60,18 +62,38 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
+    // Assuming the user is successfully authenticated
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
+    // Fetch the question tracker for this user
+    const questionTracker = await StaffQuestionTracker.findOne({ staffId: user._id })
+      .populate('questionsAnswered.questionId', 'questionText category');
 
-    // if (user.OTP) return res.status(400).json({ message: 'OTP not verified' });
+    // Count the number of questions answered
+    const questionsAnsweredCount = questionTracker ? questionTracker.questionsAnswered.length : 0;
 
+    // Get the count of questions uploaded by this staff member
+    const questionsUploadedCount = await getQuestionCountByStaff(user._id);
 
-    const payload = { id: user._id };
-    const token = jwt.sign(payload, process.env.SECRET_KEY, { expiresIn: '5h' });
-
-    res.status(200).json({ token });
+    // Return the user info along with the question tracking data
+    return res.status(200).json({
+      message: 'Login successful',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        questionsAnswered: questionsAnsweredCount,
+        questionsUploaded: questionsUploadedCount,
+        recentQuestions: questionTracker ? questionTracker.questionsAnswered.slice(-5) : []
+      }
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({
+      message: 'Login failed',
+      error: error.message
+    });
   }
 };
 

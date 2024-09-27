@@ -1,53 +1,43 @@
-const express = require("express")
-const router = express.Router()
+const express = require("express");
+const router = express.Router();
 const {
   signup,
   login,
+  staffLogin,
+  superAdminLogin,
+  superAdminSignup,
+  adminAddStaff,
   logout,
   verifyOtp,
-  verifyStaffOtp,
-  verifySuperAdminOtp,
-  resendUserOtp,
-  resendStaffOtp,
-  resendSuperAdminOtp,
   forgetPassword,
   changePassword,
-  superAdminSignup,
-  superAdminLogin,
-  adminAddStaff,
-  staffLogin,
-  studentSignup,
-  studentLogin,
   getDashboardStats,
-  toggleOTPRequirement
-} = require("../controllers/Auth")
+  toggleOTPRequirement,
+  checkSuperAdmin,
+  generateReferralLink  // Add this line
+} = require("../controllers/Auth");
+const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
-const authMiddleware = require('../middleware/auth');
+// Public routes
+router.post('/signup', signup);
+router.post('/login', login);
+router.post('/staff-login', staffLogin);
+router.post('/super-admin-login', superAdminLogin);
+router.post('/super-admin-signup', superAdminSignup);
+router.post('/logout', logout);
+router.post('/verify-otp', verifyOtp);
+router.post('/forget-password', forgetPassword);
+router.post('/change-password', changePassword);
 
-router.post('/signup', signup)
-router.post('/login', login)
-router.post('/verify-otp', verifyOtp)
-router.post('/verify-staff-otp', verifyStaffOtp)
-router.post('/verify-super-admin-otp', verifySuperAdminOtp)
-router.post('/forget-password', forgetPassword)
-router.post('/change-password', changePassword)
-router.post('/super-admin-signup', superAdminSignup) // Removed authMiddleware
-router.post('/super-admin-login', superAdminLogin)
-router.post('/admin-add-staff', authMiddleware, adminAddStaff)
-router.post('/staff-login', staffLogin)
-router.post('/student-signup', studentSignup)
-router.post('/student-login', studentLogin)
+// Protected routes
+router.get('/dashboard-stats', isAuthenticated, getDashboardStats);
+router.post('/toggle-otp-requirement', isAuthenticated, toggleOTPRequirement);
+router.post('/admin-add-staff', isAuthenticated, isAdmin, adminAddStaff);
 
-router.get('/dashboard-stats', getDashboardStats)
+// Additional route for checking super admin
+router.post('/check-super-admin', checkSuperAdmin);
 
-router.post('/resend-user-otp', resendUserOtp)
-router.post('/resend-staff-otp', resendStaffOtp)
-router.post('/resend-super-admin-otp', resendSuperAdminOtp)
-router.post('/toggle-otp-requirement', authMiddleware, toggleOTPRequirement)
-
-// Remove the refresh token route
-// router.post('/refresh-token', refreshToken)
-
-router.post('/logout', logout)
+// New route for generating referral link
+router.get('/referral-link', isAuthenticated, generateReferralLink);
 
 module.exports = router;

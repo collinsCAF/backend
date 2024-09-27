@@ -1,6 +1,32 @@
-module.exports = function(req, res, next) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Not authenticated' });
+const jwt = require('jsonwebtoken');
+
+exports.isAuthenticated = (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
   }
-  next();
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    req.user = decoded;
+    next();
+  } catch (ex) {
+    res.status(400).json({ message: 'Invalid token.' });
+  }
+};
+
+exports.isAdmin = (req, res, next) => {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied. Admin only.' });
+  }
+};
+
+exports.isStaffOrAdmin = (req, res, next) => {
+    if (req.user && (req.user.role === 'staff' || req.user.role === 'superadmin')) {
+        next();
+    } else {
+        res.status(403).json({ message: 'Access denied. Staff or Admin only.' });
+    }
 };
