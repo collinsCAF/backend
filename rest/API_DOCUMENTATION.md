@@ -24,108 +24,67 @@ Error responses will include a JSON object with a `message` field describing the
 
 ## Authentication Routes
 
-### 1. User Signup
-- **Route:** `/api/auth/signup`
-- **Method:** POST
-- **Body:**
-  - `name`: String (required)
-  - `email`: String (required)
-  - `password`: String (required)
-  - `phoneNumber`: String (optional)
-  - `school`: String (optional)
-  - `referralCode`: String (optional) - Email of the referring user
-- **Description:** Register a new user account. If a valid referral code (email of an existing user) is provided, the new user will be linked to the referrer.
+### User Signup
+- **POST** `/api/auth/signup`
+- **Body**: `{ name, email, password, phoneNumber, school, referralCode }`
+- **Description**: Register a new user account.
 
-### 2. User Login
-- **Route:** `/api/auth/login`
-- **Method:** POST
-- **Body:**
-  - `email`: String (required)
-  - `password`: String (required)
-- **Description:** Authenticate a user and create a session.
+### User Login
+- **POST** `/api/auth/user-login`
+- **Body**: `{ email, password }`
+- **Description**: Authenticate a user (student) and receive a JWT token.
 
-### 3. Staff Login
-- **Route:** `/api/auth/staff-login`
-- **Method:** POST
-- **Body:**
-  - `email`: String (required)
-  - `password`: String (required)
-- **Description:** Authenticate a staff member and create a session.
+### Staff Login
+- **POST** `/api/auth/staff-login`
+- **Body**: `{ email, password }`
+- **Description**: Authenticate a staff member or super admin and receive a JWT token.
 
-### 4. Super Admin Login
-- **Route:** `/api/auth/super-admin-login`
-- **Method:** POST
-- **Body:**
-  - `email`: String (required)
-  - `password`: String (required)
-- **Description:** Authenticate a super admin and create a session.
+### Logout
+- **POST** `/api/auth/logout`
+- **Description**: Log out the current user (client-side token removal).
 
-### 5. Super Admin Signup
-- **Route:** `/api/auth/super-admin-signup`
-- **Method:** POST
-- **Body:**
-  - `name`: String (required)
-  - `email`: String (required)
-  - `password`: String (required)
-  - `confirmPassword`: String (required)
-- **Description:** Register a new super admin account.
+### Verify OTP
+- **POST** `/api/auth/verify-otp`
+- **Body**: `{ email, otp }`
+- **Description**: Verify the OTP sent to the user's email.
 
-### 6. Logout
-- **Route:** `/api/auth/logout`
-- **Method:** POST
-- **Description:** End the user's session and log them out.
+### Forget Password
+- **POST** `/api/auth/forget-password`
+- **Body**: `{ email }`
+- **Description**: Initiate the password reset process.
 
-### 7. Verify OTP
-- **Route:** `/api/auth/verify-otp`
-- **Method:** POST
-- **Body:**
-  - `email`: String (required)
-  - `otp`: String (required)
-- **Description:** Verify the OTP sent to the user's email.
+### Change Password
+- **POST** `/api/auth/change-password`
+- **Body**: `{ email, newPassword, confirmPassword }`
+- **Description**: Change the user's password.
 
-### 8. Forget Password
-- **Route:** `/api/auth/forget-password`
-- **Method:** POST
-- **Body:**
-  - `email`: String (required)
-- **Description:** Request a password reset OTP.
+### Super Admin Signup
+- **POST** `/api/auth/super-admin-signup`
+- **Body**: `{ name, email, password }`
+- **Description**: Create a super admin account (only if no super admin exists).
 
-### 9. Change Password
-- **Route:** `/api/auth/change-password`
-- **Method:** POST
-- **Body:**
-  - `email`: String (required)
-  - `otp`: String (required)
-  - `newPassword`: String (required)
-  - `confirmPassword`: String (required)
-- **Description:** Change the user's password after OTP verification.
+### Get Dashboard Stats
+- **GET** `/api/auth/dashboard-stats`
+- **Description**: Retrieve dashboard statistics (requires authentication).
 
-### 10. Get Dashboard Stats
-- **Route:** `/api/auth/dashboard-stats`
-- **Method:** GET
-- **Description:** Retrieve dashboard statistics (total questions, students, and staff).
-- **Authentication:** Required
+### Toggle OTP Requirement
+- **POST** `/api/auth/toggle-otp-requirement`
+- **Body**: `{ email, requireOTP }`
+- **Description**: Enable or disable OTP requirement for a user (requires authentication).
 
-### 11. Toggle OTP Requirement
-- **Route:** `/api/auth/toggle-otp-requirement`
-- **Method:** POST
-- **Body:**
-  - `email`: String (required)
-  - `requireOTP`: Boolean (required)
-- **Description:** Enable or disable OTP requirement for a user.
-- **Authentication:** Required
+### Add Staff Member
+- **POST** `/api/auth/admin-add-staff`
+- **Body**: `{ name, email, password, confirmPassword, role }`
+- **Description**: Add a new staff member (requires admin authentication).
 
-### 12. Admin Add Staff
-- **Route:** `/api/auth/admin-add-staff`
-- **Method:** POST
-- **Body:**
-  - `name`: String (required)
-  - `email`: String (required)
-  - `password`: String (required)
-  - `confirmPassword`: String (required)
-  - `role`: String (required)
-- **Description:** Allow an admin to add a new staff member.
-- **Authentication:** Required (Admin only)
+### Check Super Admin
+- **POST** `/api/auth/check-super-admin`
+- **Body**: `{ email }`
+- **Description**: Check if a super admin exists with the given email.
+
+### Generate Referral Link
+- **GET** `/api/auth/referral-link`
+- **Description**: Generate a referral link for the authenticated user.
 
 ## Question Routes
 
@@ -166,14 +125,7 @@ Error responses will include a JSON object with a `message` field describing the
 - Make sure to handle errors appropriately on the client-side based on the returned status codes and error messages.
 - For routes that require authentication or specific roles (like admin), ensure that the necessary middleware is in place to check the user's session and permissions before allowing access to the route.
 
-### 16. Generate Referral Link
-- **Route:** `/api/auth/referral-link`
-- **Method:** GET
-- **Description:** Generate a referral link for the authenticated user.
-- **Authentication:** Required
-- **Response:** Returns a referral link that includes the user's email as the referral code.
-
-### 17. Get Questions by Staff
+### 16. Get Questions by Staff
 - **Route:** `/api/staff-questions/:staffId`
 - **Method:** GET
 - **Params:**
@@ -181,7 +133,7 @@ Error responses will include a JSON object with a `message` field describing the
 - **Description:** Retrieve all questions uploaded by a specific staff member.
 - **Authentication:** Required (Staff or Admin only)
 
-### 18. Get Staff Question Statistics
+### 17. Get Staff Question Statistics
 - **Route:** `/api/staff-question-stats`
 - **Method:** GET
 - **Description:** Retrieve statistics about the number of questions uploaded by the authenticated staff member for each category.
@@ -192,7 +144,7 @@ Error responses will include a JSON object with a `message` field describing the
     - `_id`: Category name
     - `count`: Number of questions in that category
 
-### 19. Get Staff Questions List (Super Admin Only)
+### 18. Get Staff Questions List (Super Admin Only)
 - **Route:** `/api/staff-questions-list`
 - **Method:** GET
 - **Description:** Retrieve a list of all staff members with their uploaded question counts and details.

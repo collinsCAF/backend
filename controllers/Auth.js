@@ -45,19 +45,10 @@ exports.signup = async (req, res) => {
   }
 };
 
-exports.login = async (req, res) => {
+exports.userLogin = async (req, res) => {
   const { email, password } = req.body;
   try {
-    // First, check if it's a staff or super-admin
-    let user = await AddStaff.findOne({ email });
-    let userType = 'staff';
-    
-    // If not found in AddStaff, check in User model (for students/regular users)
-    if (!user) {
-      user = await User.findOne({ email });
-      userType = 'user';
-    }
-
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -71,10 +62,38 @@ exports.login = async (req, res) => {
     res.status(200).json({ 
       message: 'Login successful', 
       token,
-      role: userType === 'staff' ? user.role : 'user',
-      userType, // 'user' for students/regular users, 'staff' for staff and super_admin
+      role: 'user',
+      userType: 'user',
       name: user.name,
       email: user.email
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.staffLogin = async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const staff = await AddStaff.findOne({ email });
+    if (!staff) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const isMatch = await staff.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    const token = generateToken(staff);
+    res.status(200).json({ 
+      message: 'Login successful', 
+      token,
+      role: staff.role,
+      userType: 'staff',
+      name: staff.name,
+      email: staff.email
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -137,13 +156,13 @@ exports.superAdminSignup = async (req, res) => {
     const { name, email, password } = req.body;
 
     // Check if a super admin already exists
-    const existingSuperAdmin = await Staff.findOne({ role: 'super_admin' });
+    const existingSuperAdmin = await AddStaff.findOne({ role: 'super_admin' });
     if (existingSuperAdmin) {
       return res.status(400).json({ message: 'A super admin already exists' });
     }
 
     // Create a new staff member with super_admin role
-    const newSuperAdmin = new Staff({
+    const newSuperAdmin = new AddStaff({
       name,
       email,
       password,

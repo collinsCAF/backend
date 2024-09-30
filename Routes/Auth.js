@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const {
   signup,
-  login,
+  userLogin,
+  staffLogin,
   logout,
   verifyOtp,
   forgetPassword,
@@ -12,13 +13,14 @@ const {
   checkSuperAdmin,
   generateReferralLink,
   superAdminSignup,
-  adminAddStaff  // Add this line to import adminAddStaff
+  adminAddStaff
 } = require("../controllers/Auth");
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
 // Public routes
 router.post('/signup', signup);
-router.post('/login', login);  // This will now handle both staff and super-admin logins
+router.post('/user-login', userLogin);  // Login for regular users (students)
+router.post('/staff-login', staffLogin);  // Login for staff and super admin
 router.post('/logout', logout);
 router.post('/verify-otp', verifyOtp);
 router.post('/forget-password', forgetPassword);
