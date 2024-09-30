@@ -11,7 +11,8 @@ const {
   toggleOTPRequirement,
   checkSuperAdmin,
   generateReferralLink,
-  superAdminSignup
+  superAdminSignup,
+  adminAddStaff  // Add this line to import adminAddStaff
 } = require("../controllers/Auth");
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 

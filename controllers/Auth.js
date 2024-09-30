@@ -82,50 +82,6 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.staffLogin = async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const staff = await AddStaff.findOne({ email });
-    if (!staff) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    const isMatch = await staff.comparePassword(password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    const token = generateToken(staff);
-    res.status(200).json({ message: 'Staff login successful', token });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-exports.superAdminLogin = async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const superAdmin = await AddStaff.findOne({ email, role: 'superadmin' });
-    if (!superAdmin) {
-      console.log(`No super admin found with email: ${email}`);
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    const isMatch = await superAdmin.comparePassword(password);
-    if (!isMatch) {
-      console.log(`Password mismatch for super admin: ${email}`);
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    const token = generateToken(superAdmin);
-    res.status(200).json({ message: 'Super admin login successful', token });
-  } catch (error) {
-    console.error('Error in superAdminLogin:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
 exports.logout = (req, res) => {
   // With JWT, logout is typically handled on the client-side
   res.status(200).json({ message: 'Logout successful' });
