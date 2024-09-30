@@ -48,7 +48,16 @@ exports.signup = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    // First, check if it's a staff or super-admin
+    let user = await AddStaff.findOne({ email });
+    let userType = 'staff';
+    
+    // If not found in AddStaff, check in User model (for students/regular users)
+    if (!user) {
+      user = await User.findOne({ email });
+      userType = 'user';
+    }
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -59,9 +68,16 @@ exports.login = async (req, res) => {
     }
 
     const token = generateToken(user);
-    res.status(200).json({ message: 'Login successful', token });
+    res.status(200).json({ 
+      message: 'Login successful', 
+      token,
+      role: userType === 'staff' ? user.role : 'user',
+      userType, // 'user' for students/regular users, 'staff' for staff and super_admin
+      name: user.name,
+      email: user.email
+    });
   } catch (error) {
-    console.log(error);
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -161,25 +177,29 @@ exports.toggleOTPRequirement = async (req, res) => {
 };
 
 exports.superAdminSignup = async (req, res) => {
-  const { name, email, password, confirmPassword } = req.body;
   try {
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: 'Passwords do not match' });
-    }
-    
-    let superAdmin = await AddStaff.findOne({ email });
-    if (superAdmin) {
-      return res.status(400).json({ message: 'Super Admin already exists' });
+    const { name, email, password } = req.body;
+
+    // Check if a super admin already exists
+    const existingSuperAdmin = await Staff.findOne({ role: 'super_admin' });
+    if (existingSuperAdmin) {
+      return res.status(400).json({ message: 'A super admin already exists' });
     }
 
-    superAdmin = new AddStaff({ name, email, password, role: 'superadmin' });
-    await superAdmin.save();
+    // Create a new staff member with super_admin role
+    const newSuperAdmin = new Staff({
+      name,
+      email,
+      password,
+      role: 'super_admin'
+    });
 
-    // After successful signup, don't generate token
-    res.status(201).json({ message: 'Super Admin created successfully' });
+    await newSuperAdmin.save();
+
+    res.status(201).json({ message: 'Super admin created successfully' });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error(error);
+    res.status(500).json({ message: 'Error creating super admin' });
   }
 };
 

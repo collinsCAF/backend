@@ -3,10 +3,6 @@ const router = express.Router();
 const {
   signup,
   login,
-  staffLogin,
-  superAdminLogin,
-  superAdminSignup,
-  adminAddStaff,
   logout,
   verifyOtp,
   forgetPassword,
@@ -14,20 +10,21 @@ const {
   getDashboardStats,
   toggleOTPRequirement,
   checkSuperAdmin,
-  generateReferralLink  // Add this line
+  generateReferralLink,
+  superAdminSignup
 } = require("../controllers/Auth");
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
 // Public routes
 router.post('/signup', signup);
-router.post('/login', login);
-router.post('/staff-login', staffLogin);
-router.post('/super-admin-login', superAdminLogin);
-router.post('/super-admin-signup', superAdminSignup);
+router.post('/login', login);  // This will now handle both staff and super-admin logins
 router.post('/logout', logout);
 router.post('/verify-otp', verifyOtp);
 router.post('/forget-password', forgetPassword);
 router.post('/change-password', changePassword);
+
+// Super Admin signup route
+router.post('/super-admin-signup', superAdminSignup);
 
 // Protected routes
 router.get('/dashboard-stats', isAuthenticated, getDashboardStats);

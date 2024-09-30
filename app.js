@@ -36,7 +36,7 @@ app.use(bodyParser.json());
 app.use(middleware.requestLogger)
 
 app.use('/api/auth', authRouter)
-app.use('/api', QuestionRouter)
+app.use('/api/questions', QuestionRouter)
 
 app.use(middleware.unknownEndpoint)
 app.use(middleware.errorHandler)
