@@ -2,12 +2,12 @@ const mongoose = require("mongoose");
 const bcrypt = require('bcryptjs');
 
 const StaffSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: {
         type: String,
-        enum: ['staff', 'super_admin'],
+        enum: ['staff', 'admin', 'superadmin'],
         default: 'staff'
     },
     OTP: { type: String },
@@ -20,12 +20,10 @@ const StaffSchema = new mongoose.Schema({
 });
 
 StaffSchema.pre('save', async function (next) {
-    const user = this;
-    if (!user.isModified('password')) return next();
-
+    if (!this.isModified('password')) return next();
     try {
         const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(user.password, salt);
+        this.password = await bcrypt.hash(this.password, salt);
         next();
     } catch (error) {
         next(error);

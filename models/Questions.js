@@ -21,7 +21,6 @@ const questionSchema = new mongoose.Schema({
     },
     answerDescription: {
         type: String,
-        // required: true,
     },
     category: {
         type: String,
@@ -31,7 +30,7 @@ const questionSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'AddStaff', required: true },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
     uploadedAt: { type: Date, default: Date.now }
 });
 

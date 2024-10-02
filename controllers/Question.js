@@ -14,42 +14,62 @@ function shuffleArray(array) {
 
 // Route to upload a new question
 exports.newQuestion = async (req, res) => {
-    const {
-        questionText,
-        options,
-        correctAnswer,
-        answerDescription,
-        category
-    } = req.body;
-
     try {
-        // Check if the user is a staff member or super admin
-        if (req.user.role !== 'staff' && req.user.role !== 'superadmin') {
-            return res.status(403).json({
-                message: 'Only staff and super admin can upload questions'
+        // Parse the request body if it's a string
+        let body = req.body;
+        if (typeof body === 'object' && Object.keys(body).length === 1) {
+            const key = Object.keys(body)[0];
+            try {
+                body = JSON.parse(key);
+            } catch (e) {
+                console.error('Error parsing request body:', e);
+                return res.status(400).json({ message: "Invalid JSON in request body. Please send a properly formatted JSON object." });
+            }
+        }
+
+        console.log('Received body:', body);
+
+        const { questionText, options, correctAnswer, answerDescription, category } = body;
+
+        // Validate required fields
+        if (!questionText || !correctAnswer || !category) {
+            return res.status(400).json({ 
+                message: "questionText, correctAnswer, and category are required fields." 
             });
         }
 
+        // Validate options
+        if (!Array.isArray(options) || options.length !== 4) {
+            return res.status(400).json({ 
+                message: "options must be an array with exactly 4 items." 
+            });
+        }
+
+        // Validate each option
+        for (let option of options) {
+            if (!option.option || !option.optionLabel) {
+                return res.status(400).json({
+                    message: "Each option must have 'option' and 'optionLabel' fields."
+                });
+            }
+        }
+
+        // Create the new question
         const newQuestion = new Question({
             questionText,
             options,
             correctAnswer,
             answerDescription,
             category,
-            uploadedBy: req.user.id
+            uploadedBy: req.user.id // Assuming you have the user's ID in the request
         });
 
         await newQuestion.save();
 
-        return res.status(201).json({
-            message: 'Question uploaded successfully',
-            question: newQuestion
-        });
+        res.status(201).json({ message: 'Question uploaded successfully', question: newQuestion });
     } catch (error) {
-        return res.status(500).json({
-            message: 'Failed to upload question',
-            error: error.message
-        });
+        console.error('Error in newQuestion:', error);
+        res.status(500).json({ message: 'Failed to upload question', error: error.message });
     }
 }
 

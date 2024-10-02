@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   signup,
   userLogin,
-  staffLogin,
+  staffLogin, // Add this new function
   logout,
   verifyOtp,
   forgetPassword,
@@ -19,8 +19,8 @@ const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
 // Public routes
 router.post('/signup', signup);
-router.post('/user-login', userLogin);  // Login for regular users (students)
-router.post('/staff-login', staffLogin);  // Login for staff and super admin
+router.post('/user-login', userLogin);
+router.post('/staff-login', staffLogin);  // New endpoint for staff and super-admin login
 router.post('/logout', logout);
 router.post('/verify-otp', verifyOtp);
 router.post('/forget-password', forgetPassword);

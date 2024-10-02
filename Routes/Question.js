@@ -12,6 +12,7 @@ const { isAuthenticated, isStaffOrAdmin, isSuperAdmin } = require("../middleware
 
 
 
+
 router.post('/upload-question', isAuthenticated, isStaffOrAdmin, newQuestion)
 router.get('/questions/:category', getQuestionByCaterogies)
 router.post('/answer-question', isAuthenticated, answerQuestion)

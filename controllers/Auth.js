@@ -74,19 +74,39 @@ exports.userLogin = async (req, res) => {
 };
 
 exports.staffLogin = async (req, res) => {
-  const { email, password } = req.body;
   try {
-    const staff = await AddStaff.findOne({ email });
-    if (!staff) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    // Parse the request body if it's a string
+    let body = req.body;
+    if (typeof body === 'object' && Object.keys(body).length === 1) {
+      const key = Object.keys(body)[0];
+      try {
+        body = JSON.parse(key);
+      } catch (e) {
+        console.error('Error parsing request body:', e);
+      }
     }
 
+    console.log('Parsed body:', body);
+
+    const { email, password } = body;
+
+    console.log('Attempting login with email:', email);
+    const staff = await AddStaff.findOne({ email });
+    console.log('Staff search result:', staff);
+    if (!staff) {
+      console.log('Staff not found');
+      return res.status(400).json({ message: 'Staff not found with this email' });
+    }
+    console.log('Staff found:', JSON.stringify(staff, null, 2));
+
     const isMatch = await staff.comparePassword(password);
+    console.log('Password match:', isMatch);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Incorrect password' });
     }
 
     const token = generateToken(staff);
+    console.log('Generated token:', token);
     res.status(200).json({ 
       message: 'Login successful', 
       token,
@@ -96,8 +116,8 @@ exports.staffLogin = async (req, res) => {
       email: staff.email
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Staff login error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -153,50 +173,104 @@ exports.toggleOTPRequirement = async (req, res) => {
 
 exports.superAdminSignup = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-
-    // Check if a super admin already exists
-    const existingSuperAdmin = await AddStaff.findOne({ role: 'super_admin' });
-    if (existingSuperAdmin) {
-      return res.status(400).json({ message: 'A super admin already exists' });
+    // Parse the request body if it's a string
+    let body = req.body;
+    if (typeof body === 'object' && Object.keys(body).length === 1) {
+      const key = Object.keys(body)[0];
+      try {
+        body = JSON.parse(key);
+      } catch (e) {
+        console.error('Error parsing request body:', e);
+      }
     }
 
-    // Create a new staff member with super_admin role
-    const newSuperAdmin = new AddStaff({
+    console.log('Received body:', body);
+
+    const { name, email, password } = body;
+
+    // Check if all required fields are provided
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email, and password are required fields." });
+    }
+
+    // Check if a staff with this email already exists
+    const existingStaff = await AddStaff.findOne({ email });
+    if (existingStaff) {
+      return res.status(400).json({ message: "A staff member with this email already exists." });
+    }
+
+    // Create a new Staff document
+    const newStaff = new AddStaff({
       name,
       email,
       password,
-      role: 'super_admin'
+      role: 'superadmin'
     });
 
-    await newSuperAdmin.save();
+    // Save the new staff member
+    await newStaff.save();
+
+    console.log('Super admin created:', newStaff);
 
     res.status(201).json({ message: 'Super admin created successfully' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error creating super admin' });
+    console.error('Error in superAdminSignup:', error);
+    res.status(500).json({ message: 'Error creating super admin', error: error.message });
   }
 };
 
 exports.adminAddStaff = async (req, res) => {
-  const { name, email, password, confirmPassword, role } = req.body;
   try {
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: 'Passwords do not match' });
-    }
-    
-    let staff = await AddStaff.findOne({ email });
-    if (staff) {
-      return res.status(400).json({ message: 'Staff member already exists' });
+    // Parse the request body if it's a string
+    let body = req.body;
+    if (typeof body === 'object' && Object.keys(body).length === 1) {
+      const key = Object.keys(body)[0];
+      try {
+        body = JSON.parse(key);
+      } catch (e) {
+        console.error('Error parsing request body:', e);
+      }
     }
 
-    staff = new AddStaff({ name, email, password, role });
+    console.log('Received body:', body);
+
+    // Trim whitespace from keys
+    body = Object.fromEntries(
+      Object.entries(body).map(([k, v]) => [k.trim(), v])
+    );
+
+    const { name, email, password, role } = body;
+
+    // Check if all required fields are provided
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: "Name, email, password, and role are required fields." });
+    }
+
+    // Validate role
+    const validRoles = ['staff', 'admin', 'superadmin'];
+    if (!validRoles.includes(role.toLowerCase())) {
+      return res.status(400).json({ message: "Invalid role. Must be 'staff', 'admin', or 'superadmin'." });
+    }
+
+    // Check if a staff with this email already exists
+    let staff = await AddStaff.findOne({ email });
+    if (staff) {
+      return res.status(400).json({ message: 'Staff member with this email already exists' });
+    }
+
+    // Create and save the new staff member
+    staff = new AddStaff({ 
+      name, 
+      email, 
+      password, 
+      role: role.toLowerCase() 
+    });
     await staff.save();
 
     res.status(201).json({ message: 'Staff member added successfully' });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error in adminAddStaff:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
